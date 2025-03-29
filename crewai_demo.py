@@ -1,34 +1,28 @@
 import streamlit as st
-import joblib
-import numpy as np
 import torch
-from sklearn.base import BaseEstimator, TransformerMixin
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
+import torch.nn.functional as F
 
-# Define custom transformer (must match your original pipeline)
-class RobertaSentimentScorer(BaseEstimator, TransformerMixin):
-    def __init__(self, model_name='cardiffnlp/twitter-roberta-base-sentiment-latest'):
-        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
-        self.model = AutoModelForSequenceClassification.from_pretrained(model_name)
+# ===== Load RoBERTa model =====
+@st.cache_resource
+def load_roberta():
+    model_name = "cardiffnlp/twitter-roberta-base-sentiment-latest"
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    model = AutoModelForSequenceClassification.from_pretrained(model_name)
+    return tokenizer, model
 
-    def fit(self, X, y=None):
-        return self
+tokenizer, model = load_roberta()
 
-    def transform(self, X):
-        scores = []
-        for text in X:
-            inputs = self.tokenizer(text, return_tensors="pt", truncation=True, max_length=512)
-            with torch.no_grad():
-                outputs = self.model(**inputs)
-                probs = torch.nn.functional.softmax(outputs.logits, dim=-1)[0]
-                sentiment_score = probs[2].item() - probs[0].item()
-            scores.append([sentiment_score])
-        return np.array(scores)
+# ===== Predict sentiment score =====
+def get_sentiment_score(review):
+    inputs = tokenizer(review, return_tensors="pt", truncation=True, max_length=512)
+    with torch.no_grad():
+        outputs = model(**inputs)
+        probs = F.softmax(outputs.logits, dim=-1)[0]
+        sentiment_score = probs[2].item() - probs[0].item()  # pos - neg
+    return sentiment_score
 
-# Load pipeline
-pipeline = joblib.load("/content/drive/MyDrive/Data /sentiment_pipeline.pkl'")  # make sure this path is correct in your app
-
-# Email simulation function
+# ===== Email generator =====
 def generate_email(name, email, sentiment):
     if sentiment == 'negative':
         return f"""
@@ -61,7 +55,7 @@ def generate_email(name, email, sentiment):
         Customer Experience Team
         """
 
-# Streamlit UI
+# ===== Streamlit UI =====
 st.title("💬 Review Sentiment & Auto Email Demo")
 
 name = st.text_input("Your Name")
@@ -70,13 +64,12 @@ review = st.text_area("Your Review")
 
 if st.button("Submit Review"):
     if name and email and review:
-        prediction = pipeline.predict([review])[0]
-        sentiment = "positive" if prediction == 2 else "negative"
-        st.success(f"Sentiment detected: **{sentiment.upper()}**")
+        score = get_sentiment_score(review)
+        sentiment = "positive" if score > 0 else "negative"
+        st.success(f"Sentiment score: `{score:.3f}` → Detected as **{sentiment.upper()}**")
 
         email_text = generate_email(name, email, sentiment)
         st.markdown("### 📧 Email Preview:")
         st.code(email_text)
     else:
         st.warning("Please fill in all fields.")
-
