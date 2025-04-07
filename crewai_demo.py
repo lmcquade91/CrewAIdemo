@@ -3,13 +3,18 @@ import torch
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 import torch.nn.functional as F
 
-# ===== Load RoBERTa model =====
+# ===== Load RoBERTa model safely =====
 @st.cache_resource
 def load_roberta():
     model_name = "cardiffnlp/twitter-roberta-base-sentiment-latest"
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
-    model = AutoModelForSequenceClassification.from_pretrained(model_name)
-    return tokenizer, model
+    
+    try:
+        tokenizer = AutoTokenizer.from_pretrained(model_name)
+        model = AutoModelForSequenceClassification.from_pretrained(model_name)
+        return tokenizer, model
+    except OSError as e:
+        st.error("🚨 Failed to load the RoBERTa model. Please check internet connection or use a local cache path.")
+        raise e
 
 tokenizer, model = load_roberta()
 
