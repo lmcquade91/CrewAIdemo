@@ -1,7 +1,33 @@
-import dill
 import streamlit as st
+import dill
+import torch
+import numpy as np
+from transformers import AutoTokenizer, AutoModelForSequenceClassification
+from sklearn.base import BaseEstimator, TransformerMixin
 
-# Load the pipeline once
+# ===== Define custom transformer class =====
+class RobertaSentimentScorer(BaseEstimator, TransformerMixin):
+    def __init__(self, model_name='cardiffnlp/twitter-roberta-base-sentiment-latest'):
+        self.model_name = model_name
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+        self.model = AutoModelForSequenceClassification.from_pretrained(model_name)
+        self.model.eval()
+
+    def fit(self, X, y=None):
+        return self
+
+    def transform(self, X):
+        scores = []
+        for text in X:
+            inputs = self.tokenizer(text, return_tensors="pt", truncation=True, max_length=512)
+            with torch.no_grad():
+                outputs = self.model(**inputs)
+                probs = torch.nn.functional.softmax(outputs.logits, dim=-1)[0]
+                sentiment_score = probs[2].item() - probs[0].item()
+            scores.append([sentiment_score])
+        return np.array(scores)
+
+# ===== Load the saved pipeline =====
 @st.cache_resource
 def load_pipeline():
     with open("sentiment_pipeline.pkl", "rb") as f:
@@ -10,11 +36,10 @@ def load_pipeline():
 
 sentiment_pipeline = load_pipeline()
 
-# ===== Use the pipeline =====
+# ===== Use the pipeline to get sentiment score =====
 def get_sentiment_score(review):
     score = sentiment_pipeline.named_steps["roberta"].transform([review])[0][0]
     return score
-
 
 # ===== Email generator =====
 def generate_email(name, email, sentiment):
