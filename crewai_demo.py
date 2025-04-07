@@ -1,40 +1,20 @@
-import os
-import gdown
-import zipfile
+import dill
 import streamlit as st
-from transformers import AutoTokenizer, AutoModelForSequenceClassification
 
+# Load the pipeline once
 @st.cache_resource
-def load_roberta():
-    model_path = "./models/roberta"
+def load_pipeline():
+    with open("sentiment_pipeline.pkl", "rb") as f:
+        pipeline = dill.load(f)
+    return pipeline
 
-    if not os.path.exists(model_path):
-        st.info("📥 Downloading RoBERTa model...")
-        zip_path = "roberta.zip"
+sentiment_pipeline = load_pipeline()
 
-        # Correct download URL using your new file ID
-        url = "https://drive.google.com/uc?id=1UcioeeBWF15l34yNLDZgMwDPrS1DWI-x"
-        gdown.download(url, output=zip_path, quiet=False, fuzzy=True)
-
-        st.info("🗂️ Unzipping model files...")
-        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-            zip_ref.extractall("models")  # Ensure it creates ./models/roberta
-
-    tokenizer = AutoTokenizer.from_pretrained(model_path)
-    model = AutoModelForSequenceClassification.from_pretrained(model_path)
-    return tokenizer, model
-
-# ✅ LOAD THE MODEL
-tokenizer, model = load_roberta()
-
-# ===== Predict sentiment score =====
+# ===== Use the pipeline =====
 def get_sentiment_score(review):
-    inputs = tokenizer(review, return_tensors="pt", truncation=True, max_length=512)
-    with torch.no_grad():
-        outputs = model(**inputs)
-        probs = F.softmax(outputs.logits, dim=-1)[0]
-        sentiment_score = probs[2].item() - probs[0].item()  # pos - neg
-    return sentiment_score
+    score = sentiment_pipeline.named_steps["roberta"].transform([review])[0][0]
+    return score
+
 
 # ===== Email generator =====
 def generate_email(name, email, sentiment):
