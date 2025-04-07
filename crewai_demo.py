@@ -1,9 +1,7 @@
-import streamlit as st
 import os
 import gdown
 import zipfile
-import torch
-import torch.nn.functional as F
+import streamlit as st
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 
 @st.cache_resource
@@ -13,14 +11,14 @@ def load_roberta():
     if not os.path.exists(model_path):
         st.info("📥 Downloading RoBERTa model...")
         zip_path = "roberta.zip"
-        
-        # Download from your Google Drive
-        url = "https://drive.google.com/uc?id=1L8NzdLZGLBL5EEGXXYNEqlxXnLMRqHwp"
-        gdown.download(url, output="roberta.zip", quiet=False)
+
+        # Correct download URL using your new file ID
+        url = "https://drive.google.com/uc?id=1UcioeeBWF15l34yNLDZgMwDPrS1DWI-x"
+        gdown.download(url, output=zip_path, quiet=False)
 
         st.info("🗂️ Unzipping model files...")
         with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-            zip_ref.extractall("models")  # Unzips to ./models/roberta
+            zip_ref.extractall("models")  # Ensure it creates ./models/roberta
 
     tokenizer = AutoTokenizer.from_pretrained(model_path)
     model = AutoModelForSequenceClassification.from_pretrained(model_path)
