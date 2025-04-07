@@ -1,22 +1,27 @@
+import os
+import gdown
+import zipfile
 import streamlit as st
-import torch
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
-import torch.nn.functional as F
 
-# ===== Load RoBERTa model safely =====
 @st.cache_resource
 def load_roberta():
-    model_name = "cardiffnlp/twitter-roberta-base-sentiment-latest"
-    
-    try:
-        tokenizer = AutoTokenizer.from_pretrained(model_name)
-        model = AutoModelForSequenceClassification.from_pretrained(model_name)
-        return tokenizer, model
-    except OSError as e:
-        st.error("🚨 Failed to load the RoBERTa model. Please check internet connection or use a local cache path.")
-        raise e
+    model_path = "./models/roberta"
 
-tokenizer, model = load_roberta()
+    if not os.path.exists(model_path):
+        st.info("📥 Downloading RoBERTa model...")
+        zip_path = "roberta.zip"
+        
+        # Download from your Google Drive
+        gdown.download(id="1L8NzdLZGLBL5EEGXXYNEqlxXnLMRqHwp", output=zip_path, quiet=False)
+
+        st.info("🗂️ Unzipping model files...")
+        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+            zip_ref.extractall("models")  # Unzips to ./models/roberta
+
+    tokenizer = AutoTokenizer.from_pretrained(model_path)
+    model = AutoModelForSequenceClassification.from_pretrained(model_path)
+    return tokenizer, model
 
 # ===== Predict sentiment score =====
 def get_sentiment_score(review):
