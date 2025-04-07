@@ -15,7 +15,8 @@ def load_roberta():
         zip_path = "roberta.zip"
         
         # Download from your Google Drive
-        gdown.download(id="1L8NzdLZGLBL5EEGXXYNEqlxXnLMRqHwp", output=zip_path, quiet=False)
+        url = "https://drive.google.com/uc?id=1L8NzdLZGLBL5EEGXXYNEqlxXnLMRqHwp"
+gdown.download(url, output="roberta.zip", quiet=False)
 
         st.info("🗂️ Unzipping model files...")
         with zipfile.ZipFile(zip_path, 'r') as zip_ref:
