@@ -1,9 +1,3 @@
-import os
-import gdown
-import zipfile
-import streamlit as st
-from transformers import AutoTokenizer, AutoModelForSequenceClassification
-
 @st.cache_resource
 def load_roberta():
     model_path = "./models/roberta"
@@ -22,6 +16,9 @@ def load_roberta():
     tokenizer = AutoTokenizer.from_pretrained(model_path)
     model = AutoModelForSequenceClassification.from_pretrained(model_path)
     return tokenizer, model
+
+# ✅ LOAD THE MODEL
+tokenizer, model = load_roberta()
 
 # ===== Predict sentiment score =====
 def get_sentiment_score(review):
